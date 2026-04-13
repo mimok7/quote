@@ -194,7 +194,7 @@ export default function LoginPage() {
       <div className="flex justify-start mb-4">
         <Image src="/logo-full.png" alt="스테이하롱 전체 로고" width={320} height={80} unoptimized />
       </div>
-      <h2 className="text-2xl font-bold mb-6 text-left">🔐 예약 신청/확인</h2>
+      <h2 className="text-2xl font-bold mb-6 text-left">🔐 견적 신청/확인</h2>
       {autoClearing && (
         <div className="mb-4 rounded bg-yellow-50 border border-yellow-200 text-yellow-700 px-3 py-2 text-sm">
           브라우저 데이터 자동 초기화 중입니다. 잠시만 기다려주세요...
@@ -226,7 +226,7 @@ export default function LoginPage() {
           className="bg-blue-500 text-white w-full py-2 rounded hover:bg-blue-600 transition disabled:opacity-50"
           disabled={loading}
         >
-          {loading ? '처리 중...' : '예약 신청/확인'}
+          {loading ? '처리 중...' : '견적 신청/확인'}
         </button>
       </form>
 
@@ -237,7 +237,7 @@ export default function LoginPage() {
             onClick={() => router.push('/signup')}
             className="text-blue-500 hover:text-blue-700 underline"
           >
-            신규예약
+            신규견적
           </button>
         </p>
       </div>

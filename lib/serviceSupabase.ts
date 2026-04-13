@@ -6,12 +6,12 @@ const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 let serviceSupabase: ReturnType<typeof createClient> | null = null;
 
 if (supabaseUrl && serviceRoleKey) {
-  serviceSupabase = createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
+    serviceSupabase = createClient(supabaseUrl, serviceRoleKey, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+        },
+    });
 }
 
 export default serviceSupabase;

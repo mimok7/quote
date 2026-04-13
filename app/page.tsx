@@ -1,14 +1,14 @@
 import React from 'react';
-import LoginPage from './login/page';
+import SignupPage from './signup/page';
 import HomeRedirector from '@/components/HomeRedirector';
 
 export default function Page() {
-    // Render the login page immediately.
+    // Render the signup page immediately (quote system).
     // Logged-in users will be redirected in the background.
     return (
         <>
             <HomeRedirector />
-            <LoginPage />
+            <SignupPage />
         </>
     );
 }

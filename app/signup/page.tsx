@@ -41,7 +41,7 @@ export default function SignupPage() {
       }
 
       console.log('✅ Auth 회원가입 성공:', authData.user.id);
-      console.log('ℹ️ users 테이블 등록은 예약 시점에 처리됩니다.');
+      console.log('ℹ️ users 테이블 등록은 견적 시점에 처리됩니다.');
 
       // 로딩 상태 명시적으로 해제 후 리다이렉트 (페이지 전환 전에 상태 업데이트 완료)
       setLoading(false);
@@ -73,7 +73,7 @@ export default function SignupPage() {
       <div className="flex justify-start mb-4">
         <Image src="/logo-full.png" alt="스테이하롱 전체 로고" width={320} height={80} unoptimized />
       </div>
-      <h2 className="text-2xl font-bold mb-6 text-left">📝 신규예약</h2>
+      <h2 className="text-2xl font-bold mb-6 text-left">📝 신규견적</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="email"
@@ -100,7 +100,7 @@ export default function SignupPage() {
           disabled={loading}
           className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:opacity-50"
         >
-          {loading ? '처리 중...' : '신규예약'}
+          {loading ? '처리 중...' : '신규견적'}
         </button>
       </form>
 
@@ -109,13 +109,13 @@ export default function SignupPage() {
           onClick={() => router.push('/login')}
           className="text-blue-500 hover:text-blue-700 underline"
         >
-          이미 계정이 있으신가요? 예약 신청/확인
+          이미 계정이 있으신가요? 견적 신청/확인
         </button>
       </div>
 
       <div className="mt-6 p-4 bg-blue-50 rounded-lg">
         <p className="text-sm text-blue-700">
-          💡 이메일과 비밀번호는 향후 예약내용을 확인하실 때 사용됩니다.
+          💡 이메일과 비밀번호는 향후 견적내용을 확인하실 때 사용됩니다.
         </p>
       </div>
     </div>
