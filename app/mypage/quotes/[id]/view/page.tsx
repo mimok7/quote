@@ -480,21 +480,23 @@ export default function QuoteDetailPage() {
           } else if (item.service_type === 'tour') {
             let tourData: any = null;
 
-            const { data: byId } = await supabase
+            // ✅ tour 테이블의 PK는 tour_id (id가 아님)
+            const { data: byTourId } = await supabase
               .from('tour')
               .select('*')
-              .eq('id', item.service_ref_id)
+              .eq('tour_id', item.service_ref_id)
               .maybeSingle();
 
-            if (byId) {
-              tourData = byId;
+            if (byTourId) {
+              tourData = byTourId;
             } else {
-              const { data: byTourId } = await supabase
+              // 폴백: id로도 시도 (데이터 구조 변경 대비)
+              const { data: byId } = await supabase
                 .from('tour')
                 .select('*')
-                .eq('tour_id', item.service_ref_id)
+                .eq('id', item.service_ref_id)
                 .maybeSingle();
-              tourData = byTourId;
+              tourData = byId;
             }
 
             if (tourData) {

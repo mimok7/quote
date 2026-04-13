@@ -125,11 +125,11 @@ export default function LoginPage() {
       }
 
       // 3) 브라우저 저장소 정리
-      try { localStorage.clear(); } catch {}
-      try { sessionStorage.clear(); } catch {}
+      try { localStorage.clear(); } catch { }
+      try { sessionStorage.clear(); } catch { }
 
       // 자동 실행 무한 루프 방지용 플래그 재설정
-      try { sessionStorage.setItem(AUTO_CLEAR_KEY, '1'); } catch {}
+      try { sessionStorage.setItem(AUTO_CLEAR_KEY, '1'); } catch { }
 
       // 4) IndexedDB/Cache/ServiceWorker 정리
       try {
@@ -145,21 +145,21 @@ export default function LoginPage() {
             });
           }));
         }
-      } catch {}
+      } catch { }
 
       try {
         if ('caches' in window) {
           const keys = await caches.keys();
           await Promise.all(keys.map((k) => caches.delete(k)));
         }
-      } catch {}
+      } catch { }
 
       try {
         if ('serviceWorker' in navigator) {
           const regs = await navigator.serviceWorker.getRegistrations();
           await Promise.all(regs.map((reg) => reg.unregister()));
         }
-      } catch {}
+      } catch { }
 
       if (!isAuto) {
         alert('초기화가 완료되었습니다. 페이지를 다시 로드합니다.');

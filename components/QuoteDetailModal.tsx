@@ -183,11 +183,12 @@ function QuoteDetailModal({ quoteId, onClose }: { quoteId: string; onClose: () =
               detailed.rentcars.push({ ...item, rentcarInfo: rentcarData, priceInfo: priceData || [] });
             }
           } else if (item.service_type === 'tour') {
+            // ✅ tour 테이블의 PK는 tour_id (id가 아님)
             const { data: tourData } = await supabase
               .from('tour')
               .select('*')
-              .eq('id', item.service_ref_id)
-              .single();
+              .eq('tour_id', item.service_ref_id)
+              .maybeSingle();
 
             if (tourData) {
               const { data: priceData } = await supabase
