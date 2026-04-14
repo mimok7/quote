@@ -55,10 +55,11 @@ WHERE c.relname = 'quote'
   AND p.prokind <> 'f';  -- 집계/윈도우 함수만 표시
 
 -- ---------------------------------------------------------------
--- [STEP 4] 긴급 조치: quote 테이블 트리거 전체 비활성화
---   이 쿼리 하나로 견적 제출 오류가 즉시 해결됩니다.
+-- [STEP 4] 긴급 조치: quote 테이블 사용자 트리거만 비활성화
+--   TRIGGER ALL → 시스템 트리거 포함이라 권한 오류(42501) 발생
+--   TRIGGER USER → 사용자 정의 트리거만 비활성화 (권한 OK)
 -- ---------------------------------------------------------------
-ALTER TABLE quote DISABLE TRIGGER ALL;
+ALTER TABLE quote DISABLE TRIGGER USER;
 
 -- ---------------------------------------------------------------
 -- [STEP 5] STEP 2/3 결과에서 문제 트리거명 확인 후 DROP
@@ -91,6 +92,6 @@ ALTER TABLE quote DISABLE TRIGGER ALL;
 -- ---------------------------------------------------------------
 -- [STEP 7] 수정 완료 후 트리거 재활성화
 -- ---------------------------------------------------------------
--- ALTER TABLE quote ENABLE TRIGGER ALL;
+-- ALTER TABLE quote ENABLE TRIGGER USER;
 
 
