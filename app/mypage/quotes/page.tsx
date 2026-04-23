@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import supabase from '@/lib/supabase';
 import PageWrapper from '@/components/PageWrapper';
+import { upsertUserProfile } from '@/lib/userUtils';
 
 type FilterTab = 'all' | 'draft' | 'submitted' | 'approved' | 'confirmed';
 
@@ -34,6 +35,25 @@ export default function QuotesUnifiedPage() {
     router.push('/mypage');
   };
 
+  const ensureUserProfile = async (authUser: any) => {
+    const fallbackName = authUser?.user_metadata?.display_name
+      || authUser?.user_metadata?.name
+      || authUser?.email?.split('@')[0]
+      || '사용자';
+
+    const result = await upsertUserProfile(authUser.id, authUser.email || '', {
+      name: fallbackName,
+      role: 'guest'
+    });
+
+    if (!result.success) {
+      console.error('사용자 프로필 보장 실패:', result.error);
+      return false;
+    }
+
+    return true;
+  };
+
   useEffect(() => {
     loadUserAndQuotes();
   }, []);
@@ -50,13 +70,19 @@ export default function QuotesUnifiedPage() {
 
       setUser(user);
 
+      const profileReady = await ensureUserProfile(user);
+      if (!profileReady) {
+        alert('사용자 정보를 준비하지 못했습니다. 잠시 후 다시 시도해주세요.');
+        return;
+      }
+
       // 사용자 프로필과 견적 목록을 병렬로 조회 (성능 최적화)
       const [profileRes, quotesRes] = await Promise.all([
         supabase
           .from('users')
           .select('nickname, name, email')
           .eq('id', user.id)
-          .single(),
+          .maybeSingle(),
         supabase
           .from('quote')
           .select('*')
@@ -130,6 +156,12 @@ export default function QuotesUnifiedPage() {
       // 자동 생성된 제목
       const autoTitle = `${nickname} ${counter}`;
 
+      const profileReady = await ensureUserProfile(user);
+      if (!profileReady) {
+        alert('사용자 정보를 준비하지 못했습니다. 다시 시도해주세요.');
+        return;
+      }
+
       // 새 견적 생성
       const { data: newQuote, error: createError } = await supabase
         .from('quote')
@@ -146,7 +178,7 @@ export default function QuotesUnifiedPage() {
 
       if (createError) {
         console.error('견적 생성 오류:', createError);
-        alert('견적 생성에 실패했습니다.');
+        alert(`견적 생성에 실패했습니다. (${createError.code || 'UNKNOWN'})`);
         return;
       }
 

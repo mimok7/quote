@@ -48,7 +48,7 @@ export default function SignupPage() {
 
       // 약간의 딜레이 후 리다이렉트 (상태 업데이트가 확실히 적용되도록)
       setTimeout(() => {
-        router.push('/mypage/profile');
+        window.location.href = 'https://quote.stayhalong.com/mypage';
       }, 300);
     } catch (error: any) {
       console.error('❌ 회원가입 실패:', error);
