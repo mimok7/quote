@@ -38,6 +38,8 @@ function QuoteManagementContent() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [serviceStatus, setServiceStatus] = useState<{ [key: string]: boolean }>({});
+  const [userQuotes, setUserQuotes] = useState<any[]>([]);
+  const [showQuoteSelector, setShowQuoteSelector] = useState(false);
 
   // 서비스 추가 상태 확인 함수
   const checkServiceStatus = async (quoteId: string) => {
@@ -96,10 +98,33 @@ function QuoteManagementContent() {
       if (existingQuoteId) {
         // URL에 quoteId가 있으면 해당 견적 로드
         loadExistingQuote(existingQuoteId);
+      } else {
+        // quoteId 없으면 기존 견적 목록 로드
+        loadUserQuotes();
       }
-      // 자동 견적 생성 제거
     }
   }, [existingQuoteId, initialized]);
+
+  // 사용자의 기존 견적 목록 로드
+  const loadUserQuotes = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: quotes } = await supabase
+        .from('quote')
+        .select('id, title, created_at, status')
+        .eq('user_id', user.id)
+        .in('status', ['draft', 'submitted'])
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (quotes && quotes.length > 0) {
+        setUserQuotes(quotes);
+        setShowQuoteSelector(true);
+      }
+    } catch (error) {
+      console.error('견적 목록 로드 오류:', error);
+    }
+  };
 
   // 페이지 포커스 시 서비스 상태 새로고침
   useEffect(() => {
@@ -208,7 +233,7 @@ function QuoteManagementContent() {
   };
 
   // 서비스 선택 시 quoteId를 URL 파라미터로 포함하여 이동
-  const handleServiceSelect = (service: typeof menuList[0]) => {
+  const handleServiceSelect = async (service: typeof menuList[0]) => {
     // 완료된 서비스인 경우 수정 모드로 이동
     if (serviceStatus[service.key]) {
       handleEditQuoteItem(service);
@@ -216,7 +241,8 @@ function QuoteManagementContent() {
     }
 
     if (!quoteId) {
-      alert('먼저 "작성" 버튼을 눌러 견적을 생성해주세요!');
+      // quoteId 없으면 새 견적 자동 생성 후 서비스 페이지로 이동
+      await handleStartQuoteCreation();
       return;
     }
     router.push(`${service.pathTemplate}?quoteId=${quoteId}`);
@@ -242,21 +268,10 @@ function QuoteManagementContent() {
                   📋 확인
                 </button>
               )}
-
-              {/* 새로운 견적 버튼 - quoteId가 없는 경우에만 표시 */}
-              {!quoteId && (
-                <button
-                  onClick={handleStartQuoteCreation}
-                  disabled={loading}
-                  className="bg-gradient-to-r from-blue-400 to-sky-500 text-white px-6 py-3 rounded-lg font-semibold shadow hover:from-blue-500 hover:to-sky-600 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {loading ? '생성 중...' : '➕ 작성'}
-                </button>
-              )}
             </div>
           </div>
 
-          {/* 견적 상태 표시 및 입력창 카드 내부 복동 */}
+          {/* 견적 상태 표시 */}
           {quoteId && quote ? (
             <div className="bg-white/70 backdrop-blur rounded-lg p-6 mb-6">
               <div>
@@ -270,6 +285,40 @@ function QuoteManagementContent() {
                 </div>
               </div>
             </div>
+          ) : showQuoteSelector ? (
+            /* 기존 견적 선택 UI */
+            <div className="bg-white/70 backdrop-blur rounded-lg p-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">📋 견적 선택</h3>
+              <p className="text-gray-600 text-sm mb-4">이어서 작업할 견적을 선택하거나 새 견적을 생성하세요.</p>
+              <div className="space-y-2 max-h-56 overflow-y-auto mb-4">
+                {userQuotes.map((q) => (
+                  <button
+                    key={q.id}
+                    onClick={() => {
+                      setShowQuoteSelector(false);
+                      loadExistingQuote(q.id);
+                      router.replace(`/mypage/quotes/new?quoteId=${q.id}`);
+                    }}
+                    className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 bg-white hover:border-blue-400 hover:bg-blue-50 transition-all"
+                  >
+                    <div className="font-medium text-gray-800">{q.title}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      {new Date(q.created_at).toLocaleDateString('ko-KR')} · {q.status === 'draft' ? '작성 중' : '제출됨'}
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={async () => {
+                  setShowQuoteSelector(false);
+                  await handleStartQuoteCreation();
+                }}
+                disabled={loading}
+                className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors font-medium disabled:opacity-60"
+              >
+                {loading ? '생성 중...' : '➕ 새 견적 생성'}
+              </button>
+            </div>
           ) : (
             <div className="bg-white/70 backdrop-blur rounded-lg p-6 mb-6">
               <div className="text-left">
@@ -277,7 +326,7 @@ function QuoteManagementContent() {
                   📝 견적 작성을 시작하세요
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  <span>"작성" 버튼을 클릭하면 견적이 자동으로 생성되고, 원하는 서비스를 선택할 수 있습니다.</span>
+                  <span>원하는 서비스를 선택하여 견적을 시작하세요.</span>
                 </p>
                 <div className="text-blue-600 text-sm">
                   <p>💡 한 번의 견적에 여러 서비스를 추가할 수 있습니다</p>
