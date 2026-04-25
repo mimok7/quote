@@ -37,8 +37,6 @@ function QuoteManagementContent() {
   const [quoteId, setQuoteId] = useState<string | null>(existingQuoteId);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [initialized, setInitialized] = useState(false);
-  const [quoteTitle, setQuoteTitle] = useState('');
-  const [showTitleInput, setShowTitleInput] = useState(false);
   const [serviceStatus, setServiceStatus] = useState<{ [key: string]: boolean }>({});
 
   // 서비스 추가 상태 확인 함수
@@ -115,24 +113,8 @@ function QuoteManagementContent() {
     return () => window.removeEventListener('focus', handleFocus);
   }, [quoteId]);
 
-  // 견적 제목 입력 시작
-  const handleStartQuoteCreation = () => {
-    setShowTitleInput(true);
-  };
-
-  // 견적 제목 입력 취소
-  const handleCancelTitleInput = () => {
-    setShowTitleInput(false);
-    setQuoteTitle('');
-  };
-
-  // 새로운 견적 생성 (제목과 함께)
-  const handleCreateNewQuote = async () => {
-    if (!quoteTitle.trim()) {
-      alert('견적 제목을 입력해주세요.');
-      return;
-    }
-
+  // 견적 이름 자동 생성 및 바로 견적 생성
+  const handleStartQuoteCreation = async () => {
     setLoading(true);
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -142,12 +124,28 @@ function QuoteManagementContent() {
         return;
       }
 
-      const newQuote = await createQuote(user.id, quoteTitle.trim());
+      // 사용자 이름 조회
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('name, nickname')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const userName = userProfile?.name || userProfile?.nickname || user.email?.split('@')[0] || '고객';
+
+      // 기존 견적 수 조회 (N 계산)
+      const { count } = await supabase
+        .from('quote')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+
+      const nextIndex = (count ?? 0) + 1;
+      const autoTitle = `${userName} 여행계획 ${nextIndex}`;
+
+      const newQuote = await createQuote(user.id, autoTitle);
       if (newQuote) {
         setQuoteId(newQuote.id);
         setQuote(newQuote);
-        setShowTitleInput(false);
-        // URL도 업데이트
         router.replace(`/mypage/quotes/new?quoteId=${newQuote.id}`);
       } else {
         alert('견적 생성에 실패했습니다.');
@@ -218,8 +216,7 @@ function QuoteManagementContent() {
     }
 
     if (!quoteId) {
-      alert('먼저 견적 제목을 입력하고 견적을 생성해주세요!');
-      setShowTitleInput(true);
+      alert('먼저 "작성" 버튼을 눌러 견적을 생성해주세요!');
       return;
     }
     router.push(`${service.pathTemplate}?quoteId=${quoteId}`);
@@ -247,20 +244,15 @@ function QuoteManagementContent() {
               )}
 
               {/* 새로운 견적 버튼 - quoteId가 없는 경우에만 표시 */}
-              {!quoteId && !showTitleInput ? (
+              {!quoteId && (
                 <button
                   onClick={handleStartQuoteCreation}
                   disabled={loading}
                   className="bg-gradient-to-r from-blue-400 to-sky-500 text-white px-6 py-3 rounded-lg font-semibold shadow hover:from-blue-500 hover:to-sky-600 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  ➕ 작성
+                  {loading ? '생성 중...' : '➕ 작성'}
                 </button>
-              ) : !quoteId && showTitleInput ? (
-                <div className="flex items-center gap-2">
-
-
-                </div>
-              ) : null}
+              )}
             </div>
           </div>
 
@@ -282,52 +274,15 @@ function QuoteManagementContent() {
             <div className="bg-white/70 backdrop-blur rounded-lg p-6 mb-6">
               <div className="text-left">
                 <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                  {showTitleInput ? '📝 행복 여행 이름 짓기' : '📝 견적 작성을 시작하세요'}
+                  📝 견적 작성을 시작하세요
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  {showTitleInput
-                    ? (<><span>행복 여행의 이름을 지어 주세요.<br />예) "하롱베이 3박4일", "가족여행 패키지", "허니문 크루즈" 등</span></>)
-                    : (<span>"작성" 버튼을 클릭하여 행복 여행 이름을 입력하고, 원하는 서비스를 선택해주세요.</span>)}
+                  <span>"작성" 버튼을 클릭하면 견적이 자동으로 생성되고, 원하는 서비스를 선택할 수 있습니다.</span>
                 </p>
                 <div className="text-blue-600 text-sm">
-                  {showTitleInput
-                    ? (<p>💡 제목은 나중에 견적 목록에서 구분하는데 도움이 됩니다</p>)
-                    : (<p>💡 한 번의 견적에 여러 서비스를 추가할 수 있습니다</p>)}
+                  <p>💡 한 번의 견적에 여러 서비스를 추가할 수 있습니다</p>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* 견적 제목 입력창과 버튼을 카드 아래에 위치 */}
-          {showTitleInput && (
-            <div className="flex items-center justify-center gap-2 mb-1">
-              <input
-                type="text"
-                value={quoteTitle}
-                onChange={(e) => setQuoteTitle(e.target.value)}
-                placeholder="행복 여행 이름 입력하세요 (예: 하롱베이 3박4일)"
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-40"
-                autoFocus
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleCreateNewQuote();
-                  }
-                }}
-              />
-              <button
-                onClick={handleCreateNewQuote}
-                disabled={loading || !quoteTitle.trim()}
-                className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {loading ? '생성 중...' : '생성'}
-              </button>
-              <button
-                onClick={handleCancelTitleInput}
-                disabled={loading}
-                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                취소
-              </button>
             </div>
           )}
         </div>
