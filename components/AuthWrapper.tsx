@@ -64,7 +64,7 @@ export function AuthWrapper({ children, requiredRole, allowedRoles }: AuthWrappe
           .from('users')
           .select('id, email, role, name')
           .eq('id', authUser.id)
-          .single();
+          .maybeSingle();
         profile = res.data;
         profileError = res.error;
         finalRole = (profile?.role || 'guest') as any;
@@ -175,33 +175,37 @@ export function useUser() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     const getUser = async () => {
       try {
         const { user: authUser, userData: profile, error } = await getCurrentUserInfo();
+        if (cancelled) return;
 
         if (error || !authUser) {
-          setUser(null);
-          setLoading(false);
+          if (!cancelled) setUser(null);
           return;
         }
 
         console.log('🪝 useUser Hook - Profile 조회:', { profile, authUserId: authUser.id });
 
-        setUser({
-          id: authUser.id,
-          email: authUser.email || '',
-          role: profile?.role || 'guest',
-          name: profile?.name
-        });
+        if (!cancelled) {
+          setUser({
+            id: authUser.id,
+            email: authUser.email || '',
+            role: profile?.role || 'guest',
+            name: profile?.name
+          });
+        }
       } catch (error) {
         console.error('사용자 정보 조회 오류:', error);
-        setUser(null);
+        if (!cancelled) setUser(null);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     getUser();
+    return () => { cancelled = true; };
   }, []);
 
   return { user, loading };

@@ -26,7 +26,12 @@ export default function MyPage() {
       try {
         setLoading(true);
 
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        // 10안에 응답 없으면 타임아웃 (무한 로딩 방지)
+        const authPromise = supabase.auth.getUser();
+        const timeoutPromise = new Promise<any>((resolve) =>
+          setTimeout(() => resolve({ data: { user: null }, error: new Error('Auth timeout') }), 10000)
+        );
+        const { data: { user }, error: userError } = await Promise.race([authPromise, timeoutPromise]);
 
         if (!mounted) return;
 
@@ -48,12 +53,14 @@ export default function MyPage() {
 
         setUser(user);
         setUserProfile(profile);
-      } catch (error) {        if (isInvalidRefreshTokenError(error)) {
+      } catch (error) {
+        if (isInvalidRefreshTokenError(error)) {
           await clearInvalidSession();
           if (mounted) router.push('/login');
           return;
         }
         console.error('사용자 정보 로드 실패:', error);
+        if (mounted) router.push('/login');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -62,16 +69,18 @@ export default function MyPage() {
     loadUserInfo();
 
     return () => { mounted = false; };
-  }, [router]);
+  }, []);
 
-  const getUserDisplayName = useCallback(() => {    if (userProfile?.name) return userProfile.name;
+  const getUserDisplayName = useCallback(() => {
+    if (userProfile?.name) return userProfile.name;
     if (user?.email) {
       return user.email.split('@')[0];
     }
     return '고객';
   }, [userProfile, user]);
 
-  const handleLogout = useCallback(async () => {    try {
+  const handleLogout = useCallback(async () => {
+    try {
       clearCachedUser();
       clearAuthCache();
       const { error } = await supabase.auth.signOut();

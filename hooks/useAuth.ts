@@ -85,8 +85,12 @@ export function useAuth(requiredRoles?: string[], redirectOnFail: string = '/log
                     return;
                 }
 
-                // 2. Supabase 인증 확인
-                const { data: { user }, error: userError } = await supabase.auth.getUser();
+                // 2. Supabase 인증 확인 (10초 타임아웃 보호)
+                const authPromise = supabase.auth.getUser();
+                const timeoutPromise = new Promise<any>((resolve) =>
+                    setTimeout(() => resolve({ data: { user: null }, error: new Error('Auth timeout') }), 10000)
+                );
+                const { data: { user }, error: userError } = await Promise.race([authPromise, timeoutPromise]);
                 if (cancelled) return;
 
                 if (userError || !user) {
