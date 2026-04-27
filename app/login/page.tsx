@@ -93,7 +93,7 @@ export default function LoginPage() {
       }
 
       // 바로 mypage로 이동
-      router.push('/mypage');
+      router.push('/mypage/quotes');
 
     } catch (error) {
       console.error('로그인 처리 오류:', error);

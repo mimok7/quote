@@ -10,7 +10,7 @@ export default function QuoteProcessingPage() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      router.push('/mypage'); // 또는 `/quote/123/view`
+      router.push('/mypage/quotes'); // 또는 `/quote/123/view`
     }, 3000);
     return () => clearTimeout(timer);
   }, [router]);

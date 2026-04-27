@@ -155,7 +155,7 @@ export default function QuoteForm({
     }
 
     alert('저장 완료');
-    router.push('/mypage');
+    router.push('/mypage/quotes');
   };
 
   // Room 코드 변경 시 자동 가격 업데이트

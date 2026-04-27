@@ -32,7 +32,7 @@ export default function QuotesUnifiedPage() {
   const [creating, setCreating] = useState(false);
 
   const handleGoHome = () => {
-    router.push('/mypage');
+    router.push('/mypage/quotes');
   };
 
   const ensureUserProfile = async (authUser: any) => {

@@ -63,7 +63,7 @@ export default function ConfirmedQuoteDetailPage() {
   const quoteId = params.id as string;
 
   const handleGoHome = () => {
-    router.push('/mypage');
+    router.push('/mypage/quotes');
   };
 
   const [user, setUser] = useState<any>(null);

@@ -53,7 +53,7 @@ function NewHotelQuoteContent() {
   useEffect(() => {
     if (!quoteId) {
       alert('견적 ID가 필요합니다.')
-      router.push('/mypage')
+      router.push('/mypage/quotes')
       return
     }
     loadQuote()
