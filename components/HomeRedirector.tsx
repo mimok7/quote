@@ -32,7 +32,7 @@ export default function HomeRedirector() {
                     if (cachedOrderId) {
                         router.replace('/mypage/reservations/order');
                     } else {
-                        router.replace('/mypage');
+                        router.replace('/mypage/quotes');
                     }
                     return;
                 }
@@ -49,8 +49,8 @@ export default function HomeRedirector() {
                 setCachedUser(user);
 
                 // Avoid blocking on additional DB lookups here.
-                // /mypage can decide further routing if needed.
-                router.replace('/mypage');
+                // /mypage/quotes is the main landing for the quote system.
+                router.replace('/mypage/quotes');
             } catch {
                 // If anything fails, keep showing the public homepage.
             }
