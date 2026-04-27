@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getCachedUser, setCachedUser } from '@/lib/authCache';
+import { clearCachedUser, getCachedOrderId, getCachedUser, setCachedUser } from '@/lib/authCache';
 
 export default function HomeRedirector() {
     const router = useRouter();
@@ -13,17 +13,34 @@ export default function HomeRedirector() {
         const run = async () => {
             try {
                 const cachedUser = getCachedUser();
+                const cachedOrderId = getCachedOrderId();
 
                 if (cancelled) return;
 
                 if (cachedUser) {
-                    router.replace('/mypage');
+                    // Cached user can be stale after session expiry; verify local session first.
+                    const { default: supabase } = await import('@/lib/supabase');
+                    const { data: { session } } = await supabase.auth.getSession();
+
+                    if (cancelled) return;
+
+                    if (!session?.user) {
+                        clearCachedUser();
+                        return;
+                    }
+
+                    if (cachedOrderId) {
+                        router.replace('/mypage/reservations/order');
+                    } else {
+                        router.replace('/mypage');
+                    }
                     return;
                 }
 
                 // Lazy-load Supabase only if needed; keep homepage paint unblocked.
                 const { default: supabase } = await import('@/lib/supabase');
-                const { data: { user }, error } = await supabase.auth.getUser();
+                const { data: { session }, error } = await supabase.auth.getSession();
+                const user = session?.user ?? null;
 
                 if (cancelled) return;
                 if (error || !user) return;

@@ -199,6 +199,7 @@ export interface PackageItem {
   id: string;
   package_id: string;
   service_type: ServiceType | 'car_sht';
+  description?: string;
   item_order: number;
   default_data?: Record<string, any>;
   created_at: string;

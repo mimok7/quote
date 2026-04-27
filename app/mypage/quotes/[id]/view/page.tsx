@@ -544,12 +544,12 @@ export default function QuoteDetailPage() {
 /* ============== 하위 프레젠테이션 컴포넌트 ============== */
 
 const ACCENT: Record<string, { bg: string; text: string }> = {
-  amber:   { bg: 'bg-amber-50',   text: 'text-amber-700' },
-  cyan:    { bg: 'bg-cyan-50',    text: 'text-cyan-700' },
-  sky:     { bg: 'bg-sky-50',     text: 'text-sky-700' },
+  amber: { bg: 'bg-amber-50', text: 'text-amber-700' },
+  cyan: { bg: 'bg-cyan-50', text: 'text-cyan-700' },
+  sky: { bg: 'bg-sky-50', text: 'text-sky-700' },
   emerald: { bg: 'bg-emerald-50', text: 'text-emerald-700' },
-  orange:  { bg: 'bg-orange-50',  text: 'text-orange-700' },
-  rose:    { bg: 'bg-rose-50',    text: 'text-rose-700' },
+  orange: { bg: 'bg-orange-50', text: 'text-orange-700' },
+  rose: { bg: 'bg-rose-50', text: 'text-rose-700' },
 };
 
 function ServiceSection({

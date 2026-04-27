@@ -1,62 +1,104 @@
 import supabase from './supabase';
 
-/**
- * Get user from local session without a network request.
- * Falls back to getUser() with a timeout if no local session.
- */
-export async function getSessionUser(timeoutMs = 10000): Promise<{ user: any; error: any }> {
+function extractUserFromStoredValue(raw: string): any | null {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) return { user: session.user, error: null };
+    const parsed = JSON.parse(raw);
+    const candidates = [
+      parsed,
+      parsed?.currentSession,
+      parsed?.session,
+      parsed?.data?.session,
+      parsed?.value?.session,
+      parsed?.value,
+    ];
 
-    // No local session – try network call with timeout
-    return await Promise.race<{ user: any; error: any }>([
-      supabase.auth.getUser().then(r => ({ user: r.data.user, error: r.error })),
-      new Promise(resolve =>
-        setTimeout(() => resolve({ user: null, error: new Error('Auth check timed out') }), timeoutMs),
-      ),
-    ]);
+    for (const candidate of candidates) {
+      const user = candidate?.user;
+      if (user?.id) return user;
+    }
+  } catch {
+    // ignore malformed storage
+  }
+
+  return null;
+}
+
+function getStoredSessionUser(): any | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const authCache = sessionStorage.getItem('app:auth:cache');
+    if (authCache) {
+      const parsed = JSON.parse(authCache);
+      if (parsed?.user?.id) return parsed.user;
+    }
+  } catch {
+    // ignore
+  }
+
+  try {
+    for (const key of Object.keys(localStorage)) {
+      if (!key.startsWith('sb-') || !key.endsWith('-auth-token')) continue;
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const user = extractUserFromStoredValue(raw);
+      if (user?.id) return user;
+    }
+  } catch {
+    // ignore
+  }
+
+  return null;
+}
+
+/**
+ * 현재 로그인된 사용자 조회.
+ *
+ * 핵심:
+ *  - supabase.auth.getSession()은 로컬 캐시만 읽음 → 네트워크/타임아웃 불필요
+ *  - 실패 시 sessionStorage / localStorage 백업에서 복구 시도
+ *  - timeoutMs 인자는 하위 호환을 위해 유지하지만 실제로 사용하지 않음
+ */
+export async function getSessionUser(_timeoutMs?: number): Promise<{ user: any; error: any }> {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+
+    if (session?.user) {
+      return { user: session.user, error: null };
+    }
+
+    // 로컬 백업에서 복구 시도
+    const fallbackUser = getStoredSessionUser();
+    if (fallbackUser) {
+      return { user: fallbackUser, error: null };
+    }
+
+    return { user: null, error };
   } catch (err) {
+    const fallbackUser = getStoredSessionUser();
+    if (fallbackUser) {
+      return { user: fallbackUser, error: null };
+    }
     return { user: null, error: err };
   }
 }
 
 /**
- * Verify auth session is still valid before a critical operation (form submit).
- * If the token is close to expiry, attempts a refresh with a timeout.
- * Returns the current user or null + error.
+ * 폼 제출 직전 호출. Supabase autoRefreshToken이 백그라운드에서 토큰을
+ * 갱신하므로 이 함수는 단순히 현재 세션 사용자를 반환만 한다.
+ * (이전엔 5분 미만 만료 시 강제 refreshSession을 시도했으나 중복 갱신/
+ *  네트워크 지연으로 오히려 제출이 실패하는 경우가 있어 단순화함)
  */
-export async function refreshAuthBeforeSubmit(timeoutMs = 8000): Promise<{ user: any; error?: any }> {
+export async function refreshAuthBeforeSubmit(_timeoutMs?: number): Promise<{ user: any; error?: any }> {
   try {
     const { data: { session }, error } = await supabase.auth.getSession();
-    if (error || !session) {
-      return { user: null, error: error || new Error('No active session') };
-    }
-
-    // If token expires within 5 minutes, proactively refresh
-    const expiresAt = session.expires_at;
-    const now = Math.floor(Date.now() / 1000);
-
-    if (expiresAt && expiresAt - now < 300) {
-      try {
-        const result = await Promise.race<Awaited<ReturnType<typeof supabase.auth.refreshSession>>>([
-          supabase.auth.refreshSession(),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('Session refresh timed out')), timeoutMs),
-          ),
-        ]);
-
-        if (result.error || !result.data.session) {
-          return { user: null, error: result.error || new Error('Session refresh failed') };
-        }
-        return { user: result.data.session.user, error: null };
-      } catch (refreshErr) {
-        return { user: null, error: refreshErr };
-      }
-    }
-
-    return { user: session.user, error: null };
+    if (session?.user) return { user: session.user, error: null };
+    const fallbackUser = getStoredSessionUser();
+    if (fallbackUser) return { user: fallbackUser, error: null };
+    return { user: null, error: error || new Error('No active session') };
   } catch (err) {
+    const fallbackUser = getStoredSessionUser();
+    if (fallbackUser) return { user: fallbackUser, error: null };
     return { user: null, error: err };
   }
 }

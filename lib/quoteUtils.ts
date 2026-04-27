@@ -15,6 +15,18 @@ import {
 // 새 견적 생성
 export async function createQuote(userId: string, title?: string): Promise<Quote | null> {
   try {
+    const { data: existingDraft, error: existingDraftError } = await supabase
+      .from('quote')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'draft')
+      .order('created_at', { ascending: false })
+      .maybeSingle();
+
+    if (!existingDraftError && existingDraft) {
+      return existingDraft;
+    }
+
     const { data, error } = await supabase
       .from('quote')
       .insert({
@@ -26,6 +38,19 @@ export async function createQuote(userId: string, title?: string): Promise<Quote
       .single();
 
     if (error) {
+      if (error.code === '23505') {
+        const { data: latestDraft, error: latestDraftError } = await supabase
+          .from('quote')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('status', 'draft')
+          .order('created_at', { ascending: false })
+          .maybeSingle();
+
+        if (!latestDraftError && latestDraft) {
+          return latestDraft;
+        }
+      }
       console.error('견적 생성 오류:', error);
       return null;
     }

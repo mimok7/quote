@@ -132,7 +132,7 @@ export const upsertUserProfile = async (
       .from('users')
       .select('id, role, email')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
     if (fetchError && fetchError.code !== 'PGRST116') {
       console.error('사용자 정보 조회 오류:', fetchError);
@@ -238,7 +238,7 @@ export const getCurrentUserInfo = async () => {
       .from('users')
       .select('id, email, name, english_name, phone_number, role, created_at, updated_at')
       .eq('id', authData.user.id)
-      .single();
+      .maybeSingle();
 
     if (dbError) {
       console.error('사용자 DB 정보 조회 실패:', dbError);

@@ -54,23 +54,62 @@ export default function QuoteForm({
 
     let currentQuoteId = quoteId;
     if (mode === 'new') {
-      const { data: quote, error } = await supabase
+      // INSERT 전에 기존 draft 확인 (409 방지)
+      const { data: existingDraft } = await supabase
         .from('quote')
-        .insert({
-          user_id: user.id,
-          checkin,
-          schedule_code: scheduleCode,
-          cruise_code: cruiseCode,
-          payment_code: paymentCode,
-          discount_rate: discountRate,
-        })
-        .select()
-        .single();
-      if (error || !quote) return alert('견적 저장 실패');
-      currentQuoteId = quote.id.toString();
-      setQuoteId(quote.id.toString());
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('status', 'draft')
+        .order('created_at', { ascending: false })
+        .maybeSingle();
+
+      if (existingDraft?.id) {
+        // 기존 draft를 현재 폼 데이터로 UPDATE
+        await supabase
+          .from('quote')
+          .update({ checkin, schedule_code: scheduleCode, cruise_code: cruiseCode, payment_code: paymentCode, discount_rate: discountRate })
+          .eq('id', existingDraft.id);
+        currentQuoteId = existingDraft.id.toString();
+        setQuoteId(currentQuoteId);
+      } else {
+        const { data: quote, error } = await supabase
+          .from('quote')
+          .insert({
+            user_id: user.id,
+            checkin,
+            schedule_code: scheduleCode,
+            cruise_code: cruiseCode,
+            payment_code: paymentCode,
+            discount_rate: discountRate,
+          })
+          .select()
+          .single();
+        if (error) {
+          if (error.code === '23505') {
+            const { data: latestDraft } = await supabase
+              .from('quote')
+              .select('id, title, status, created_at')
+              .eq('user_id', user.id)
+              .eq('status', 'draft')
+              .order('created_at', { ascending: false })
+              .maybeSingle();
+
+            if (!latestDraft?.id) return alert('견적 저장 실패');
+            currentQuoteId = latestDraft.id.toString();
+            setQuoteId(currentQuoteId);
+          } else {
+            return alert('견적 저장 실패');
+          }
+        } else if (!quote) {
+          return alert('견적 저장 실패');
+        } else {
+          currentQuoteId = quote.id.toString();
+          setQuoteId(currentQuoteId);
+        }
+      }
     } else {
       // 수정: quote 테이블만 업데이트
+      if (!currentQuoteId) return alert('견적 저장 실패');
       await supabase
         .from('quote')
         .update({
@@ -80,17 +119,19 @@ export default function QuoteForm({
           payment_code: paymentCode,
           discount_rate: discountRate,
         })
-        .eq('id', quoteId);
+        .eq('id', currentQuoteId);
       // 기존 quote_room + detail 삭제
-      await supabase.from('quote_room_detail').delete().eq('quote_id', quoteId);
-      await supabase.from('quote_room').delete().eq('quote_id', quoteId);
+      await supabase.from('quote_room_detail').delete().eq('quote_id', currentQuoteId);
+      await supabase.from('quote_room').delete().eq('quote_id', currentQuoteId);
     }
+
+    if (!currentQuoteId) return alert('견적 저장 실패');
 
     for (const room of rooms) {
       const { data: roomRow, error: roomErr } = await supabase
         .from('quote_room')
         .insert({
-          quote_id: quoteId,
+          quote_id: currentQuoteId,
           room_code: room.room_code,
           vehicle_code: room.vehicle_code,
           vehicle_category_code: room.vehicle_category_code,
@@ -103,7 +144,7 @@ export default function QuoteForm({
       for (const [category, count] of Object.entries(room.categoryCounts || {})) {
         if ((count as number) > 0) {
           await supabase.from('quote_room_detail').insert({
-            quote_id: quoteId,
+            quote_id: currentQuoteId,
             category,
             person_count: count as number,
             passenger_type: category,
